@@ -709,6 +709,20 @@
             color: #6B5D4D;
             text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
         }
+        .feedback-text {
+    text-align: center;
+    font-size: 0.8rem;
+    color: #6B5D4D;
+    font-weight: 600;
+    margin-top: 8px;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.6);
+}
+
+.feedback-text .highlight {
+    font-weight: bold;
+    color: #C4956A;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.4);
+}
     </style>
 </head>
 <body>
@@ -779,7 +793,14 @@
         <span class="busuanzi-counter">
             本关卡已被挑战 <span id="busuanzi_value_page_pv"></span> 次
         </span>
+        <div class="footer">
+    <span class="busuanzi-counter">
+        本关卡已被挑战 <span id="busuanzi_value_page_pv"></span> 次
+    </span>
+    <div class="feedback-text">
+        游戏问题反馈，请到小红书 <span class="highlight">化学反应猜猜看</span> 或公众号 <span class="highlight">碳话硅</span>
     </div>
+</div>
 
     <script>
         const elementDB = [
