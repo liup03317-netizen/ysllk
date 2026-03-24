@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>元素连连看 - 黏土风</title>
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, "Arial Rounded MT Bold", "Nunito", "PingFang SC", "Microsoft YaHei", sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            background-color: #F9F6F0;
+            background-image: 
+                radial-gradient(ellipse at 20% 30%, rgba(255, 200, 150, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(150, 220, 200, 0.12) 0%, transparent 50%),
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+        }
+
+        .game-container {
+            max-width: 500px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 12px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            text-align: center;
+            padding: 10px 0 8px;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #5D4E37;
+            text-shadow: 
+                1px 1px 0 rgba(255, 255, 255, 0.8),
+                2px 2px 4px rgba(93, 78, 55, 0.2);
+            letter-spacing: 2px;
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .stat-item {
+            background: linear-gradient(145deg, #EDE8DF, #D9D3C7);
+            padding: 8px 14px;
+            border-radius: 14px;
+            font-size: 0.8rem;
+            color: #6B5D4D;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 
+                4px 4px 8px rgba(0, 0, 0, 0.08),
+                -2px -2px 6px rgba(255, 255, 255, 0.9),
+                inset 1px 1px 2px rgba(255, 255, 255, 0.7),
+                inset -1px -1px 2px rgba(0, 0, 0, 0.05);
+            font-weight: 600;
+        }
+
+        .stat-item .value {
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: #4A3F35;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+
+        .timer-container {
+            width: 100%;
+            height: 10px;
+            background: linear-gradient(145deg, #E5E0D6, #D4CFC3);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+            box-shadow: 
+                inset 2px 2px 4px rgba(0, 0, 0, 0.1),
+                inset -1px -1px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        .timer-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #98D8C1, #7EC8A3);
+            border-radius: 10px;
+            transition: width 0.1s linear, background 0.3s ease;
+            box-shadow: 
+                inset 0 2px 4px rgba(255, 255, 255, 0.4),
+                inset 0 -1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .timer-bar.warning {
+            background: linear-gradient(90deg, #F5C77E, #E8B55D);
+        }
+
+        .timer-bar.danger {
+            background: linear-gradient(90deg, #F5A5A5, #E88B8B);
+            animation: pulse-timer 0.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse-timer {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.75; }
+        }
+
+        .mode-banner {
+            text-align: center;
+            padding: 8px 14px;
+            margin-bottom: 10px;
+            background: linear-gradient(145deg, #EDE8DF, #D9D3C7);
+            border-radius: 12px;
+            font-size: 0.85rem;
+            color: #6B5D4D;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            box-shadow: 
+                3px 3px 6px rgba(0, 0, 0, 0.06),
+                -2px -2px 5px rgba(255, 255, 255, 0.85),
+                inset 1px 1px 2px rgba(255, 255, 255, 0.7);
+            font-weight: 600;
+        }
+
+        .mode-banner.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .mode-banner .mode-name {
+            font-weight: 800;
+            color: #C4956A;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+        }
+
+        .grid-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+        }
+
+        .grid-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(6, 1fr);
+            gap: 10px;
+            width: 100%;
+            max-width: 380px;
+            aspect-ratio: 4/6;
+        }
+
+        .card {
+            position: relative;
+            border-radius: 18px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+            -webkit-user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            word-break: break-word;
+            font-size: clamp(0.7rem, 3.2vw, 0.95rem);
+            letter-spacing: 0.5px;
+        }
+
+        .card:not(.type-right) {
+            background: linear-gradient(145deg, #FFB085, #E89B6E);
+            color: #5D3A1A;
+            box-shadow: 
+                6px 6px 12px rgba(180, 120, 80, 0.25),
+                -3px -3px 8px rgba(255, 230, 210, 0.7),
+                inset 2px 2px 4px rgba(255, 220, 200, 0.6),
+                inset -2px -2px 4px rgba(180, 100, 60, 0.15);
+        }
+
+        .card.type-right {
+            background: linear-gradient(145deg, #98D8C1, #7EC8A3);
+            color: #2A4D3E;
+            box-shadow: 
+                6px 6px 12px rgba(100, 160, 130, 0.25),
+                -3px -3px 8px rgba(200, 240, 220, 0.7),
+                inset 2px 2px 4px rgba(200, 245, 225, 0.6),
+                inset -2px -2px 4px rgba(80, 140, 110, 0.15);
+        }
+
+        .card:not(.type-right),
+        .card.type-right {
+            text-shadow: 
+                0 1px 1px rgba(255, 255, 255, 0.4),
+                0 -1px 1px rgba(0, 0, 0, 0.1);
+        }
+
+        .card:active:not(.matched):not(.disabled) {
+            transform: scale(0.92);
+        }
+
+        .card:not(.type-right):active:not(.matched):not(.disabled) {
+            box-shadow: 
+                2px 2px 5px rgba(180, 120, 80, 0.3),
+                -1px -1px 3px rgba(255, 230, 210, 0.5),
+                inset 3px 3px 8px rgba(180, 100, 60, 0.25),
+                inset -2px -2px 6px rgba(255, 220, 200, 0.4);
+        }
+
+        .card.type-right:active:not(.matched):not(.disabled) {
+            box-shadow: 
+                2px 2px 5px rgba(100, 160, 130, 0.3),
+                -1px -1px 3px rgba(200, 240, 220, 0.5),
+                inset 3px 3px 8px rgba(80, 140, 110, 0.25),
+                inset -2px -2px 6px rgba(200, 245, 225, 0.4);
+        }
+
+        .card.selected {
+            transform: scale(0.96);
+        }
+
+        .card:not(.type-right).selected {
+            box-shadow: 
+                3px 3px 6px rgba(180, 120, 80, 0.25),
+                -2px -2px 5px rgba(255, 230, 210, 0.6),
+                inset 3px 3px 8px rgba(180, 100, 60, 0.2),
+                inset -2px -2px 6px rgba(255, 220, 200, 0.35),
+                0 0 0 3px rgba(255, 176, 133, 0.5);
+            animation: cardPulseOrange 1s ease-in-out infinite;
+        }
+
+        .card.type-right.selected {
+            box-shadow: 
+                3px 3px 6px rgba(100, 160, 130, 0.25),
+                -2px -2px 5px rgba(200, 240, 220, 0.6),
+                inset 3px 3px 8px rgba(80, 140, 110, 0.2),
+                inset -2px -2px 6px rgba(200, 245, 225, 0.35),
+                0 0 0 3px rgba(152, 216, 193, 0.5);
+            animation: cardPulseGreen 1s ease-in-out infinite;
+        }
+
+        @keyframes cardPulseOrange {
+            0%, 100% { 
+                box-shadow: 
+                    3px 3px 6px rgba(180, 120, 80, 0.25),
+                    -2px -2px 5px rgba(255, 230, 210, 0.6),
+                    inset 3px 3px 8px rgba(180, 100, 60, 0.2),
+                    inset -2px -2px 6px rgba(255, 220, 200, 0.35),
+                    0 0 0 3px rgba(255, 176, 133, 0.5);
+            }
+            50% { 
+                box-shadow: 
+                    3px 3px 6px rgba(180, 120, 80, 0.25),
+                    -2px -2px 5px rgba(255, 230, 210, 0.6),
+                    inset 3px 3px 8px rgba(180, 100, 60, 0.2),
+                    inset -2px -2px 6px rgba(255, 220, 200, 0.35),
+                    0 0 0 4px rgba(255, 176, 133, 0.7);
+            }
+        }
+
+        @keyframes cardPulseGreen {
+            0%, 100% { 
+                box-shadow: 
+                    3px 3px 6px rgba(100, 160, 130, 0.25),
+                    -2px -2px 5px rgba(200, 240, 220, 0.6),
+                    inset 3px 3px 8px rgba(80, 140, 110, 0.2),
+                    inset -2px -2px 6px rgba(200, 245, 225, 0.35),
+                    0 0 0 3px rgba(152, 216, 193, 0.5);
+            }
+            50% { 
+                box-shadow: 
+                    3px 3px 6px rgba(100, 160, 130, 0.25),
+                    -2px -2px 5px rgba(200, 240, 220, 0.6),
+                    inset 3px 3px 8px rgba(80, 140, 110, 0.2),
+                    inset -2px -2px 6px rgba(200, 245, 225, 0.35),
+                    0 0 0 4px rgba(152, 216, 193, 0.7);
+            }
+        }
+
+        .card.matched {
+            animation: cardVanish 0.45s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            pointer-events: none;
+        }
+
+        .card.disabled {
+            pointer-events: none;
+        }
+
+        .card.wrong {
+            animation: cardShake 0.45s ease-in-out;
+        }
+
+        @keyframes cardShake {
+            0%, 100% { transform: translateX(0) scale(0.96); }
+            15% { transform: translateX(-5px) scale(0.96); }
+            30% { transform: translateX(5px) scale(0.96); }
+            45% { transform: translateX(-4px) scale(0.96); }
+            60% { transform: translateX(4px) scale(0.96); }
+            75% { transform: translateX(-2px) scale(0.96); }
+        }
+
+        @keyframes cardVanish {
+            0% { 
+                transform: scale(0.96); 
+                opacity: 1; 
+            }
+            30% { 
+                transform: scale(1.08); 
+                opacity: 0.9;
+            }
+            100% { 
+                transform: scale(0.3) rotate(8deg); 
+                opacity: 0;
+            }
+        }
+
+        .level-up-flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle, rgba(255, 200, 150, 0.4) 0%, rgba(150, 220, 200, 0.3) 100%);
+            pointer-events: none;
+            opacity: 0;
+            z-index: 50;
+        }
+
+        .level-up-flash.show {
+            animation: flashIn 0.6s ease-out;
+        }
+
+        @keyframes flashIn {
+            0% { opacity: 0; }
+            25% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        .combo-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #C4956A;
+            text-shadow: 
+                2px 2px 0 rgba(255, 255, 255, 0.8),
+                4px 4px 8px rgba(0, 0, 0, 0.15);
+            pointer-events: none;
+            opacity: 0;
+            z-index: 60;
+            letter-spacing: 4px;
+        }
+
+        .combo-text.show {
+            animation: comboPop 0.85s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes comboPop {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+            35% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+            100% { opacity: 0; transform: translate(-50%, -65%) scale(1); }
+        }
+
+        .time-bonus {
+            position: fixed;
+            font-size: 1.2rem;
+            font-weight: 800;
+            pointer-events: none;
+            opacity: 0;
+            z-index: 60;
+        }
+
+        .time-bonus.show {
+            animation: bonusFloat 0.75s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .time-bonus.positive {
+            color: #5A9A7E;
+            text-shadow: 
+                1px 1px 0 rgba(255, 255, 255, 0.8),
+                2px 2px 4px rgba(90, 154, 126, 0.3);
+        }
+
+        .time-bonus.negative {
+            color: #C87A7A;
+            text-shadow: 
+                1px 1px 0 rgba(255, 255, 255, 0.8),
+                2px 2px 4px rgba(200, 122, 122, 0.3);
+        }
+
+        @keyframes bonusFloat {
+            0% { opacity: 1; transform: translateY(0) scale(0.85); }
+            40% { opacity: 1; transform: translateY(-15px) scale(1.05); }
+            100% { opacity: 0; transform: translateY(-35px) scale(1); }
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(93, 78, 55, 0.4);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.35s ease;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: linear-gradient(145deg, #FDFCFA, #EDE8DF);
+            border-radius: 28px;
+            padding: 32px;
+            text-align: center;
+            max-width: 320px;
+            width: 90%;
+            box-shadow: 
+                12px 12px 30px rgba(0, 0, 0, 0.15),
+                -6px -6px 20px rgba(255, 255, 255, 0.9),
+                inset 2px 2px 4px rgba(255, 255, 255, 0.8),
+                inset -1px -1px 3px rgba(0, 0, 0, 0.05);
+            transform: scale(0.85);
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .modal-overlay.show .modal {
+            transform: scale(1);
+        }
+
+        .modal h2 {
+            color: #5D4E37;
+            font-size: 1.5rem;
+            margin-bottom: 12px;
+            font-weight: 800;
+            text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.6);
+        }
+
+        .modal .final-score {
+            font-size: 3.2rem;
+            font-weight: 900;
+            background: linear-gradient(145deg, #FFB085, #98D8C1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 18px 0;
+            filter: drop-shadow(2px 2px 0 rgba(255, 255, 255, 0.5));
+        }
+
+        .modal .final-level {
+            color: #7A6B5A;
+            font-size: 1rem;
+            margin-bottom: 24px;
+            font-weight: 600;
+        }
+
+        .modal .final-level strong {
+            color: #C4956A;
+            font-size: 1.3rem;
+        }
+
+        .modal-btn {
+            background: linear-gradient(145deg, #FFB085, #E89B6E);
+            color: #5D3A1A;
+            border: none;
+            padding: 16px 44px;
+            border-radius: 20px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 
+                5px 5px 12px rgba(180, 120, 80, 0.25),
+                -3px -3px 8px rgba(255, 230, 210, 0.6),
+                inset 1px 1px 3px rgba(255, 220, 200, 0.5),
+                inset -1px -1px 2px rgba(180, 100, 60, 0.1);
+            transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+            text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-btn:active {
+            transform: scale(0.94);
+            box-shadow: 
+                2px 2px 5px rgba(180, 120, 80, 0.25),
+                -1px -1px 3px rgba(255, 230, 210, 0.4),
+                inset 3px 3px 8px rgba(180, 100, 60, 0.2),
+                inset -2px -2px 5px rgba(255, 220, 200, 0.35);
+        }
+
+        .main-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+
+        .main-menu.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .menu-title {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #5D4E37;
+            text-shadow: 
+                2px 2px 0 rgba(255, 255, 255, 0.8),
+                4px 4px 8px rgba(93, 78, 55, 0.2);
+            margin-bottom: 50px;
+            letter-spacing: 4px;
+            text-align: center;
+            line-height: 1.3;
+        }
+
+        .menu-subtitle {
+            font-size: 1rem;
+            color: #8B7B6A;
+            font-weight: 600;
+            margin-top: 8px;
+            letter-spacing: 1px;
+        }
+
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 85%;
+            max-width: 320px;
+        }
+
+        .menu-btn {
+            padding: 20px 30px;
+            border: none;
+            border-radius: 20px;
+            font-size: 1.15rem;
+            font-weight: 800;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: 1px;
+        }
+
+        .menu-btn.middle {
+            background: linear-gradient(145deg, #FFB085, #E89B6E);
+            color: #5D3A1A;
+            box-shadow: 
+                6px 6px 14px rgba(180, 120, 80, 0.3),
+                -3px -3px 10px rgba(255, 230, 210, 0.7),
+                inset 2px 2px 4px rgba(255, 220, 200, 0.6),
+                inset -2px -2px 4px rgba(180, 100, 60, 0.15);
+            text-shadow: 0 1px 1px rgba(255, 255, 255, 0.4);
+        }
+
+        .menu-btn.high {
+            background: linear-gradient(145deg, #98D8C1, #7EC8A3);
+            color: #2A4D3E;
+            box-shadow: 
+                6px 6px 14px rgba(100, 160, 130, 0.3),
+                -3px -3px 10px rgba(200, 240, 220, 0.7),
+                inset 2px 2px 4px rgba(200, 245, 225, 0.6),
+                inset -2px -2px 4px rgba(80, 140, 110, 0.15);
+            text-shadow: 0 1px 1px rgba(255, 255, 255, 0.4);
+        }
+
+        .menu-btn:active {
+            transform: scale(0.94);
+        }
+
+        .menu-btn.middle:active {
+            box-shadow: 
+                2px 2px 5px rgba(180, 120, 80, 0.3),
+                -1px -1px 3px rgba(255, 230, 210, 0.4),
+                inset 3px 3px 8px rgba(180, 100, 60, 0.25),
+                inset -2px -2px 6px rgba(255, 220, 200, 0.4);
+        }
+
+        .menu-btn.high:active {
+            box-shadow: 
+                2px 2px 5px rgba(100, 160, 130, 0.3),
+                -1px -1px 3px rgba(200, 240, 220, 0.4),
+                inset 3px 3px 8px rgba(80, 140, 110, 0.25),
+                inset -2px -2px 6px rgba(200, 245, 225, 0.4);
+        }
+
+        .menu-btn-desc {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            opacity: 0.75;
+            margin-top: 4px;
+        }
+
+        .back-btn {
+            background: linear-gradient(145deg, #EDE8DF, #D9D3C7);
+            color: #6B5D4D;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 
+                3px 3px 6px rgba(0, 0, 0, 0.06),
+                -2px -2px 5px rgba(255, 255, 255, 0.85),
+                inset 1px 1px 2px rgba(255, 255, 255, 0.7);
+            transition: all 0.15s ease;
+        }
+
+        .back-btn:active {
+            transform: scale(0.94);
+            box-shadow: 
+                inset 2px 2px 4px rgba(0, 0, 0, 0.08);
+        }
+
+        .game-container {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+
+        .game-container.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        @media (max-width: 360px) {
+            .grid-board {
+                gap: 7px;
+            }
+            
+            .card {
+                border-radius: 14px;
+            }
+            
+            .header h1 {
+                font-size: 1.3rem;
+            }
+
+            .stat-item {
+                padding: 6px 10px;
+                font-size: 0.75rem;
+            }
+
+            .stat-item .value {
+                font-size: 1rem;
+            }
+
+            .menu-title {
+                font-size: 2rem;
+            }
+        }
+
+        @media (min-height: 800px) {
+            .grid-board {
+                max-width: 400px;
+            }
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 10px 0 16px;
+            font-size: 0.75rem;
+            color: #8B7B6A;
+            font-weight: 600;
+        }
+        
+        .busuanzi-counter {
+            display: inline-block;
+            background: linear-gradient(145deg, #EDE8DF, #D9D3C7);
+            padding: 6px 12px;
+            border-radius: 12px;
+            box-shadow: 
+                2px 2px 4px rgba(0, 0, 0, 0.06),
+                -1px -1px 3px rgba(255, 255, 255, 0.85),
+                inset 1px 1px 2px rgba(255, 255, 255, 0.7);
+            font-size: 0.7rem;
+            color: #6B5D4D;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="level-up-flash" id="levelUpFlash"></div>
+    <div class="combo-text" id="comboText">连击!</div>
+    
+    <div class="main-menu" id="mainMenu">
+        <div class="menu-title">
+            元素连连看
+            <div class="menu-subtitle">化学元素周期表记忆游戏</div>
+        </div>
+        <div class="menu-buttons">
+            <button class="menu-btn middle" id="middleSchoolBtn">
+                初中版
+                <span class="menu-btn-desc">前20号元素</span>
+            </button>
+            <button class="menu-btn high" id="highSchoolBtn">
+                高中版
+                <span class="menu-btn-desc">核心36号元素</span>
+            </button>
+        </div>
+    </div>
+    
+    <div class="game-container" id="gameContainer">
+        <div class="header">
+            <h1>元素连连看</h1>
+        </div>
+        
+        <div class="stats-bar">
+            <button class="back-btn" id="backBtn">← 返回</button>
+            <div class="stat-item">
+                <span>关卡</span>
+                <span class="value" id="levelNum">1</span>
+            </div>
+            <div class="stat-item">
+                <span>得分</span>
+                <span class="value" id="score">0</span>
+            </div>
+            <div class="stat-item">
+                <span>时间</span>
+                <span class="value" id="timeDisplay">60</span>
+            </div>
+        </div>
+        
+        <div class="timer-container">
+            <div class="timer-bar" id="timerBar"></div>
+        </div>
+        
+        <div class="mode-banner" id="modeBanner">
+            当前模式：<span class="mode-name" id="modeName">符号 vs 名称</span>
+        </div>
+        
+        <div class="grid-container">
+            <div class="grid-board" id="gridBoard"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <h2>游戏结束</h2>
+            <div class="final-score" id="finalScore">0</div>
+            <div class="final-level">闯过 <strong id="finalLevel">0</strong> 关</div>
+            <button class="modal-btn" id="restartBtn">再来一局</button>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <span class="busuanzi-counter">
+            本关卡已被挑战 <span id="busuanzi_value_page_pv"></span> 次
+        </span>
+    </div>
+
+    <script>
+        const elementDB = [
+            { symbol: "H", name: "氢", number: 1, category: "非金属", valence: "+1" },
+            { symbol: "He", name: "氦", number: 2, category: "稀有气体", valence: "0" },
+            { symbol: "Li", name: "锂", number: 3, category: "碱金属", valence: "+1" },
+            { symbol: "Be", name: "铍", number: 4, category: "碱土金属", valence: "+2" },
+            { symbol: "B", name: "硼", number: 5, category: "类金属", valence: "+3" },
+            { symbol: "C", name: "碳", number: 6, category: "非金属", valence: "-4, +2, +4" },
+            { symbol: "N", name: "氮", number: 7, category: "非金属", valence: "-3, +2, +4, +5" },
+            { symbol: "O", name: "氧", number: 8, category: "非金属", valence: "-2" },
+            { symbol: "F", name: "氟", number: 9, category: "卤族元素", valence: "-1" },
+            { symbol: "Ne", name: "氖", number: 10, category: "稀有气体", valence: "0" },
+            { symbol: "Na", name: "钠", number: 11, category: "碱金属", valence: "+1" },
+            { symbol: "Mg", name: "镁", number: 12, category: "碱土金属", valence: "+2" },
+            { symbol: "Al", name: "铝", number: 13, category: "主族金属", valence: "+3" },
+            { symbol: "Si", name: "硅", number: 14, category: "准金属/类金属", valence: "-4, +4" },
+            { symbol: "P", name: "磷", number: 15, category: "非金属", valence: "-3, +3, +5" },
+            { symbol: "S", name: "硫", number: 16, category: "非金属", valence: "-2, +4, +6" },
+            { symbol: "Cl", name: "氯", number: 17, category: "卤族元素", valence: "-1, +1, +5, +7" },
+            { symbol: "Ar", name: "氩", number: 18, category: "稀有气体", valence: "0" },
+            { symbol: "K", name: "钾", number: 19, category: "碱金属", valence: "+1" },
+            { symbol: "Ca", name: "钙", number: 20, category: "碱土金属", valence: "+2" },
+            { symbol: "Sc", name: "钪", number: 21, category: "过渡金属", valence: "+3" },
+            { symbol: "Ti", name: "钛", number: 22, category: "过渡金属", valence: "+3, +4" },
+            { symbol: "V", name: "钒", number: 23, category: "过渡金属", valence: "+2, +3, +4, +5" },
+            { symbol: "Cr", name: "铬", number: 24, category: "过渡金属", valence: "+2, +3, +6" },
+            { symbol: "Mn", name: "锰", number: 25, category: "过渡金属", valence: "+2, +4, +6, +7" },
+            { symbol: "Fe", name: "铁", number: 26, category: "过渡金属", valence: "+2, +3" },
+            { symbol: "Co", name: "钴", number: 27, category: "过渡金属", valence: "+2, +3" },
+            { symbol: "Ni", name: "镍", number: 28, category: "过渡金属", valence: "+2" },
+            { symbol: "Cu", name: "铜", number: 29, category: "过渡金属", valence: "+1, +2" },
+            { symbol: "Zn", name: "锌", number: 30, category: "过渡金属", valence: "+2" },
+            { symbol: "Ga", name: "镓", number: 31, category: "金属", valence: "+3" },
+            { symbol: "Ge", name: "锗", number: 32, category: "类金属", valence: "+2, +4" },
+            { symbol: "As", name: "砷", number: 33, category: "类金属", valence: "-3, +3, +5" },
+            { symbol: "Se", name: "硒", number: 34, category: "非金属", valence: "-2, +4, +6" },
+            { symbol: "Br", name: "溴", number: 35, category: "卤族元素", valence: "-1, +1, +5, +7" },
+            { symbol: "Kr", name: "氪", number: 36, category: "稀有气体", valence: "0" },
+            { symbol: "Rb", name: "铷", number: 37, category: "碱金属", valence: "+1" },
+            { symbol: "Sr", name: "锶", number: 38, category: "碱土金属", valence: "+2" },
+            { symbol: "Y", name: "钇", number: 39, category: "过渡金属", valence: "+3" },
+            { symbol: "Zr", name: "锆", number: 40, category: "过渡金属", valence: "+4" },
+            { symbol: "Nb", name: "铌", number: 41, category: "过渡金属", valence: "+3, +5" },
+            { symbol: "Mo", name: "钼", number: 42, category: "过渡金属", valence: "+4, +6" },
+            { symbol: "Tc", name: "锝", number: 43, category: "过渡金属", valence: "+4, +7" },
+            { symbol: "Ru", name: "钌", number: 44, category: "过渡金属", valence: "+3, +4" },
+            { symbol: "Rh", name: "铑", number: 45, category: "过渡金属", valence: "+3" },
+            { symbol: "Pd", name: "钯", number: 46, category: "过渡金属", valence: "+2, +4" },
+            { symbol: "Ag", name: "银", number: 47, category: "过渡金属", valence: "+1" },
+            { symbol: "Cd", name: "镉", number: 48, category: "过渡金属", valence: "+2" },
+            { symbol: "In", name: "铟", number: 49, category: "金属", valence: "+3" },
+            { symbol: "Sn", name: "锡", number: 50, category: "金属", valence: "+2, +4" },
+            { symbol: "Sb", name: "锑", number: 51, category: "类金属", valence: "+3, +5" },
+            { symbol: "Te", name: "碲", number: 52, category: "类金属", valence: "-2, +4, +6" },
+            { symbol: "I", name: "碘", number: 53, category: "卤族元素", valence: "-1, +1, +5, +7" },
+            { symbol: "Xe", name: "氙", number: 54, category: "稀有气体", valence: "0" },
+            { symbol: "Cs", name: "铯", number: 55, category: "碱金属", valence: "+1" },
+            { symbol: "Ba", name: "钡", number: 56, category: "碱土金属", valence: "+2" },
+            { symbol: "La", name: "镧", number: 57, category: "稀土元素", valence: "+3" },
+            { symbol: "Ce", name: "铈", number: 58, category: "稀土元素", valence: "+3, +4" },
+            { symbol: "Pr", name: "镨", number: 59, category: "稀土元素", valence: "+3" },
+            { symbol: "Nd", name: "钕", number: 60, category: "稀土元素", valence: "+3" },
+            { symbol: "Au", name: "金", number: 79, category: "过渡金属", valence: "+1, +3" },
+            { symbol: "Hg", name: "汞", number: 80, category: "过渡金属", valence: "+1, +2" },
+            { symbol: "Pb", name: "铅", number: 82, category: "金属", valence: "+2, +4" }
+        ];
+
+        const gameModes = [
+            { id: 'symbol-name', name: '符号 vs 名称', leftType: 'symbol', rightType: 'name', getLeft: (el) => el.symbol, getRight: (el) => el.name },
+            { id: 'symbol-number', name: '符号 vs 原子序数', leftType: 'symbol', rightType: 'number', getLeft: (el) => el.symbol, getRight: (el) => String(el.number) },
+            { id: 'symbol-category', name: '符号 vs 类别', leftType: 'symbol', rightType: 'category', getLeft: (el) => el.symbol, getRight: (el) => el.category },
+            { id: 'symbol-valence', name: '符号 vs 化合价', leftType: 'symbol', rightType: 'valence', getLeft: (el) => el.symbol, getRight: (el) => el.valence },
+            { id: 'name-number', name: '名称 vs 原子序数', leftType: 'name', rightType: 'number', getLeft: (el) => el.name, getRight: (el) => String(el.number) }
+        ];
+
+        let currentLevel = 0, score = 0, timeLeft = 60, maxTime = 60;
+        let selectedCard = null, matchedPairs = 0, totalPairs = 12;
+        let audioContext = null, timerInterval = null, currentMatchMode = null;
+        let isGameOver = false, comboCount = 0, lastMatchTime = 0, educationLevel = null;
+
+        function initAudio() {
+            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playSound(type) {
+            initAudio();
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            
+            if (type === 'match') {
+                osc.frequency.setValueAtTime(523.25, audioContext.currentTime);
+                osc.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.06);
+                osc.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.2, audioContext.currentTime);
+                osc.start();
+                osc.stop(audioContext.currentTime + 0.2);
+            } else if (type === 'combo') {
+                [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+                    const o = audioContext.createOscillator();
+                    const g = audioContext.createGain();
+                    o.connect(g);
+                    g.connect(audioContext.destination);
+                    o.frequency.setValueAtTime(f, audioContext.currentTime + i * 0.05);
+                    g.gain.setValueAtTime(0.15, audioContext.currentTime + i * 0.05);
+                    o.start(audioContext.currentTime + i * 0.05);
+                    o.stop(audioContext.currentTime + i * 0.05 + 0.1);
+                });
+            } else if (type === 'error') {
+                osc.frequency.setValueAtTime(200, audioContext.currentTime);
+                osc.frequency.setValueAtTime(150, audioContext.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.2, audioContext.currentTime);
+                osc.start();
+                osc.stop(audioContext.currentTime + 0.15);
+            } else if (type === 'levelUp') {
+                [523.25, 587.33, 659.25, 698.46, 783.99, 880, 987.77, 1046.5].forEach((f, i) => {
+                    const o = audioContext.createOscillator();
+                    const g = audioContext.createGain();
+                    o.connect(g);
+                    g.connect(audioContext.destination);
+                    o.frequency.setValueAtTime(f, audioContext.currentTime + i * 0.06);
+                    g.gain.setValueAtTime(0.12, audioContext.currentTime + i * 0.06);
+                    o.start(audioContext.currentTime + i * 0.06);
+                    o.stop(audioContext.currentTime + i * 0.06 + 0.1);
+                });
+            } else if (type === 'gameOver') {
+                [392, 349.23, 329.63, 293.66].forEach((f, i) => {
+                    const o = audioContext.createOscillator();
+                    const g = audioContext.createGain();
+                    o.connect(g);
+                    g.connect(audioContext.destination);
+                    o.frequency.setValueAtTime(f, audioContext.currentTime + i * 0.12);
+                    g.gain.setValueAtTime(0.2, audioContext.currentTime + i * 0.12);
+                    o.start(audioContext.currentTime + i * 0.12);
+                    o.stop(audioContext.currentTime + i * 0.12 + 0.15);
+                });
+            }
+        }
+
+        function shuffle(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        function getRandomElements(arr, count) {
+            return shuffle(arr).slice(0, count);
+        }
+
+        function updateTimerDisplay() {
+            const pct = (timeLeft / maxTime) * 100;
+            const bar = document.getElementById('timerBar');
+            const display = document.getElementById('timeDisplay');
+            bar.style.width = pct + '%';
+            display.textContent = Math.ceil(timeLeft);
+            bar.classList.remove('warning', 'danger');
+            if (pct <= 20) bar.classList.add('danger');
+            else if (pct <= 40) bar.classList.add('warning');
+        }
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (isGameOver) return;
+                timeLeft -= 0.1;
+                updateTimerDisplay();
+                if (timeLeft <= 0) gameOver();
+            }, 100);
+        }
+
+        function addTime(amt) {
+            timeLeft = Math.min(timeLeft + amt, maxTime);
+            updateTimerDisplay();
+        }
+
+        function showTimeBonus(amt, x, y) {
+            const el = document.createElement('div');
+            el.className = 'time-bonus show ' + (amt > 0 ? 'positive' : 'negative');
+            el.textContent = amt > 0 ? '+' + amt + 's' : amt + 's';
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 700);
+        }
+
+        function showCombo(count) {
+            if (count >= 2) {
+                const el = document.getElementById('comboText');
+                const msgs = ['连击!', '双连!', '三连!', '四连!', '五连!', '超神!'];
+                el.textContent = msgs[Math.min(count - 2, msgs.length - 1)];
+                el.className = 'combo-text show';
+                setTimeout(() => el.className = 'combo-text', 800);
+                playSound('combo');
+            }
+        }
+
+        function createCard(text, cardType, isRight, index) {
+            const card = document.createElement('div');
+            card.className = 'card' + (isRight ? ' type-right' : '');
+            card.textContent = text;
+            card.dataset.type = cardType;
+            card.dataset.value = text;
+            card.dataset.index = index;
+            card.addEventListener('click', () => handleCardClick(card));
+            return card;
+        }
+
+        function findElementByProperty(type, value) {
+            const map = { symbol: 'symbol', name: 'name', number: 'number', category: 'category', valence: 'valence' };
+            const prop = map[type];
+            if (!prop) return null;
+            return elementDB.find(el => {
+                if (prop === 'number') return String(el.number) === value;
+                if (prop === 'valence') return el.valence.includes(value);
+                return el[prop] === value;
+            });
+        }
+
+        function checkMatch(card1, card2, mode) {
+            const type1 = card1.dataset.type, type2 = card2.dataset.type;
+            const value1 = card1.dataset.value, value2 = card2.dataset.value;
+            
+            if (type1 === type2) return false;
+            
+            const isLR = (type1 === mode.leftType && type2 === mode.rightType);
+            const isRL = (type1 === mode.rightType && type2 === mode.leftType);
+            if (!isLR && !isRL) return false;
+            
+            let elType, elVal, attrType, attrVal;
+            if (isLR) { elType = type1; elVal = value1; attrType = type2; attrVal = value2; }
+            else { elType = type2; elVal = value2; attrType = type1; attrVal = value1; }
+            
+            const el = findElementByProperty(elType, elVal);
+            if (!el) return false;
+            
+            switch (attrType) {
+                case 'name': return el.name === attrVal;
+                case 'number': return String(el.number) === attrVal;
+                case 'category': return el.category === attrVal;
+                case 'valence':
+                    const cleanDb = el.valence.replace(/\s+/g, '');
+                    const cleanCard = attrVal.replace(/\s+/g, '');
+                    if (cleanDb === cleanCard) return true;
+                    const dbArr = cleanDb.split(',');
+                    const cardArr = cleanCard.split(',');
+                    return cardArr.every(v => dbArr.includes(v));
+                default: return false;
+            }
+        }
+
+        function handleCardClick(card) {
+            if (card.classList.contains('matched') || card.classList.contains('disabled') || isGameOver) return;
+            if (selectedCard === null) {
+                selectedCard = card;
+                card.classList.add('selected');
+            } else if (selectedCard === card) {
+                card.classList.remove('selected');
+                selectedCard = null;
+            } else {
+                if (checkMatch(selectedCard, card, currentMatchMode)) handleMatch(selectedCard, card);
+                else handleMismatch(selectedCard, card);
+            }
+        }
+
+        function handleMatch(c1, c2) {
+            c1.classList.remove('selected');
+            c1.classList.add('disabled');
+            c2.classList.add('disabled');
+            
+            const now = Date.now();
+            comboCount = (now - lastMatchTime < 2000) ? comboCount + 1 : 1;
+            lastMatchTime = now;
+            
+            playSound('match');
+            showCombo(comboCount);
+            
+            const r = c1.getBoundingClientRect();
+            showTimeBonus(2, (r.left + r.right) / 2, r.top);
+            addTime(2);
+            
+            setTimeout(() => {
+                c1.classList.add('matched');
+                c2.classList.add('matched');
+                c1.classList.remove('disabled');
+                c2.classList.remove('disabled');
+                matchedPairs++;
+                score += 10 + Math.min(comboCount, 5) * 5;
+                document.getElementById('score').textContent = score;
+                if (matchedPairs === totalPairs) setTimeout(levelComplete, 500);
+                selectedCard = null;
+            }, 100);
+        }
+
+        function handleMismatch(c1, c2) {
+            playSound('error');
+            c1.classList.remove('selected');
+            c1.classList.add('wrong');
+            c2.classList.add('wrong');
+            const r = c1.getBoundingClientRect();
+            showTimeBonus(-3, (r.left + r.right) / 2, r.top);
+            addTime(-3);
+            comboCount = 0;
+            setTimeout(() => { c1.classList.remove('wrong'); c2.classList.remove('wrong'); }, 400);
+            selectedCard = null;
+        }
+
+        function levelComplete() {
+            currentLevel++;
+            document.getElementById('levelNum').textContent = currentLevel;
+            playSound('levelUp');
+            const flash = document.getElementById('levelUpFlash');
+            flash.classList.add('show');
+            setTimeout(() => flash.classList.remove('show'), 500);
+            setTimeout(generateLevel, 800);
+        }
+
+        function generateLevel() {
+            matchedPairs = 0;
+            selectedCard = null;
+            comboCount = 0;
+            currentMatchMode = gameModes[Math.floor(Math.random() * gameModes.length)];
+            
+            let db = educationLevel === 'middle' ? elementDB.filter(e => e.number <= 20) : elementDB;
+            const selected = getRandomElements(db, totalPairs);
+            
+            const banner = document.getElementById('modeBanner');
+            document.getElementById('modeName').textContent = currentMatchMode.name;
+            banner.classList.add('show');
+            setTimeout(() => banner.classList.remove('show'), 2500);
+            
+            const cards = [];
+            selected.forEach((el, i) => {
+                cards.push({ text: currentMatchMode.getLeft(el), type: currentMatchMode.leftType, right: false });
+                cards.push({ text: currentMatchMode.getRight(el), type: currentMatchMode.rightType, right: true });
+            });
+            
+            const shuffled = shuffle(cards);
+            const grid = document.getElementById('gridBoard');
+            grid.innerHTML = '';
+            shuffled.forEach((c, i) => grid.appendChild(createCard(c.text, c.type, c.right, i)));
+        }
+
+        function gameOver() {
+            isGameOver = true;
+            clearInterval(timerInterval);
+            playSound('gameOver');
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalLevel').textContent = currentLevel;
+            document.getElementById('modalOverlay').classList.add('show');
+        }
+
+        function restartGame() {
+            isGameOver = false;
+            currentLevel = 0;
+            score = 0;
+            timeLeft = 60;
+            matchedPairs = 0;
+            selectedCard = null;
+            comboCount = 0;
+            document.getElementById('levelNum').textContent = 1;
+            document.getElementById('score').textContent = 0;
+            document.getElementById('modalOverlay').classList.remove('show');
+            updateTimerDisplay();
+            generateLevel();
+            startTimer();
+        }
+
+        function startGame(level) {
+            educationLevel = level;
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('gameContainer').classList.add('show');
+            restartGame();
+        }
+
+        function backToMenu() {
+            isGameOver = true;
+            clearInterval(timerInterval);
+            document.getElementById('gameContainer').classList.remove('show');
+            document.getElementById('mainMenu').classList.remove('hidden');
+            document.getElementById('modalOverlay').classList.remove('show');
+            currentLevel = 0;
+            score = 0;
+            timeLeft = 60;
+            matchedPairs = 0;
+            selectedCard = null;
+            comboCount = 0;
+            educationLevel = null;
+        }
+
+        document.getElementById('middleSchoolBtn').addEventListener('click', () => startGame('middle'));
+        document.getElementById('highSchoolBtn').addEventListener('click', () => startGame('high'));
+        document.getElementById('backBtn').addEventListener('click', backToMenu);
+        document.getElementById('restartBtn').addEventListener('click', restartGame);
+    </script>
+</body>
+</html>
